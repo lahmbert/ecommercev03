@@ -297,11 +297,13 @@ const Navbar = ({ cart, setIsOpenCart, isOpenCart, setCart }) => {
                           className="flex py-4 my-4 text-black border-b-2 border-black justify-between items-start"
                         >
                           <div className="flex items-start gap-2 justify-between">
-                            <img
-                              src={item.products.image_url} // Properti relasi dari Supabase
-                              alt={item.products.name}
-                              className="w-14 h-auto"
-                            />
+                            {item.products?.image_url ? (
+                              <img
+                                src={item.products.image_url} // Properti relasi dari Supabase
+                                alt={item.products.name}
+                                className="w-14 h-auto"
+                              />
+                            ) : null}
                             <div className="flex w-auto flex-col">
                               <div className="flex font-bold text-2xl flex-wrap">
                                 {item.products.name}
