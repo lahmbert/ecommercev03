@@ -60,14 +60,16 @@ const Cart = ({ cart, setIsOpenCart, removeFromCart }) => (
       )}
     </div>
 
-    <div className="flex justify-center pt-2">
-      <Button
-        size="medium"
-        color="default"
-        className="rounded-md"
-        label="Continue"
-      />
-    </div>
+    {cart?.length !== 0 ? (
+      <div className="flex justify-center pt-2">
+        <Button
+          size="medium"
+          color="default"
+          className="rounded-md"
+          label="Continue"
+        />
+      </div>
+    ) : null}
   </div>
 );
 
