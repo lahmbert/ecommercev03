@@ -40,7 +40,6 @@ export const fetchCart = async (setCart) => {
       .single();
 
     if (cartError || !cartData) {
-      console.error('No cart found');
       return;
     }
 

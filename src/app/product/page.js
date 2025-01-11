@@ -95,7 +95,7 @@ const ProductPage = () => {
 
       if (cartError || !cartData) {
         // Jika tidak ada cart, buat cart baru
-        const { data: newCart, error: newCartError } = await supabase
+        const { error: newCartError } = await supabase
           .from('cart')
           .insert([{ user_id: userId }])
           .single();
@@ -105,7 +105,16 @@ const ProductPage = () => {
           return;
         }
 
-        cartData = newCart;
+        let { data: newCartData, error: newCartDataError } = await supabase
+          .from('cart')
+          .select('id')
+          .eq('user_id', userId)
+          .single();
+
+        if (newCartDataError) {
+          console.error('Cart Belum Masuk', newCartDataError);
+        }
+        cartData = newCartData;
       }
 
       // Cek apakah produk sudah ada di cart
@@ -117,7 +126,6 @@ const ProductPage = () => {
         .single();
 
       if (cartItemsError && cartItemsError.code !== 'PGRST116') {
-        console.error('Error fetching cart items:', cartItemsError);
         return;
       }
 
