@@ -35,6 +35,8 @@ const ProductPage = () => {
       const { data: globalUser, error: globalUserError } =
         await supabase.auth.getUser();
       if (globalUserError) {
+        setAlertMessage('Silahkan Login');
+        showAlert(true);
         console.error('Error fetching user:', globalUserError);
         return;
       }
