@@ -1,5 +1,4 @@
 'use client';
-
 import Button from '@/components/Button';
 import Footer from '@/components/Footer';
 import Navbar from '@/components/Navbar';
@@ -11,80 +10,16 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import React, { useEffect, useState } from 'react';
+import supabase from '../lib/Supabase';
+import { fetchCategoeries } from '@/api/fetchcategory';
+import { fetchProducts } from '@/api/fetchproduct';
 
 const ProductPage = () => {
   const [showAlert, setShowAlert] = useState(false); // State for showing the alert
   const [alertMessage, setAlertMessage] = useState(''); // State for the alert message
   const [valueQty, setValueQty] = useState({});
 
-  const ourProduct = [
-    {
-      id: '01',
-      name: 'Product 1',
-      price: '80000',
-      category: 'non coffee',
-      link: '/images/a1.jpg',
-      stock: '0',
-    },
-    {
-      id: '02',
-      name: 'Product 2',
-      price: '80000',
-      category: 'non coffee',
-      link: '/images/a1.jpg',
-      stock: '10',
-    },
-    {
-      id: '03',
-      name: 'Product 3',
-      price: '80000',
-      category: 'non coffee',
-      link: '/images/a1.jpg',
-      stock: '10',
-    },
-    {
-      id: '04',
-      name: 'Product 4',
-      price: '80000',
-      category: 'non coffee',
-      link: '/images/a1.jpg',
-      stock: '10',
-    },
-    {
-      id: '05',
-      name: 'Product 5',
-      price: '80000',
-      category: 'coffee',
-      link: '/images/a1.jpg',
-      stock: '10',
-    },
-    {
-      id: '06',
-      name: 'Product 6',
-      price: '80000',
-      category: 'coffee',
-      link: '/images/a1.jpg',
-      stock: '10',
-    },
-    {
-      id: '07',
-      name: 'Product 7',
-      price: '80000',
-      category: 'coffee',
-      link: '/images/a1.jpg',
-      stock: '10',
-    },
-    {
-      id: '08',
-      name: 'Product 8',
-      price: '80000',
-      category: 'coffee',
-      link: '/images/a1.jpg',
-      stock: '10',
-    },
-  ];
-
-  const [products, setProducts] = useState(ourProduct);
+  const [products, setProducts] = useState([]);
 
   const handleQtyChange = (productId, newQty) => {
     // Update valueQty untuk produk tertentu
@@ -94,56 +29,134 @@ const ProductPage = () => {
     }));
   };
 
-  const addToCart = (product, qty) => {
-    if (product.stock <= 0) {
-      setAlertMessage(`${product.name} is out of stock!`);
+  const addToCart = async (product, qty) => {
+    try {
+      // Mengambil informasi pengguna dari Supabase Auth
+      const { data: globalUser, error: globalUserError } =
+        await supabase.auth.getUser();
+      if (globalUserError) {
+        console.error('Error fetching user:', globalUserError);
+        return;
+      }
+      const userEmail = globalUser.user.email; // Mendapatkan email pengguna
+
+      // Mendapatkan user_id dari tabel users berdasarkan email
+      const { data: publicUser, error: publicUserError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', userEmail)
+        .single();
+
+      if (publicUserError) {
+        console.error('Error fetching users items:', publicUserError);
+        return;
+      }
+
+      const userId = publicUser.id; // ID pengguna
+      console.log('User ID:', userId); // Debug: pastikan userId sudah benar
+
+      // Cek apakah produk habis
+      if (product.stock <= 0) {
+        setAlertMessage(`${product.name} is out of stock!`);
+        setShowAlert(true);
+        setTimeout(() => setShowAlert(false), 3000);
+        return;
+      }
+
+      // Cek apakah kuantitas melebihi stok
+      if (product.stock < qty) {
+        setAlertMessage(`Insufficient stock for ${product.name}!`);
+        setShowAlert(true);
+        setTimeout(() => setShowAlert(false), 3000);
+        return;
+      }
+
+      // Cek apakah user sudah memiliki cart
+      let { data: cartData, error: cartError } = await supabase
+        .from('cart')
+        .select('id')
+        .eq('user_id', userId)
+        .single();
+
+      if (cartError || !cartData) {
+        // Jika tidak ada cart, buat cart baru
+        const { data: newCart, error: newCartError } = await supabase
+          .from('cart')
+          .insert([{ user_id: userId }])
+          .single();
+
+        if (newCartError) {
+          console.error('Error creating cart:', newCartError);
+          return;
+        }
+
+        cartData = newCart;
+      }
+
+      // Cek apakah produk sudah ada di cart
+      const { data: cartItems, error: cartItemsError } = await supabase
+        .from('cart_items')
+        .select('id, quantity')
+        .eq('cart_id', cartData.id)
+        .eq('product_id', product.id)
+        .single();
+
+      if (cartItemsError && cartItemsError.code !== 'PGRST116') {
+        console.error('Error fetching cart items:', cartItemsError);
+        return;
+      }
+
+      // Jika produk sudah ada, perbarui kuantitas
+      if (cartItems) {
+        const updatedQuantity = cartItems.quantity + qty;
+
+        const { error: updateError } = await supabase
+          .from('cart_items')
+          .update({ quantity: updatedQuantity })
+          .eq('id', cartItems.id);
+
+        if (updateError) {
+          console.error('Error updating cart item:', updateError);
+          return;
+        }
+      } else {
+        // Jika produk belum ada di cart, tambahkan produk baru
+
+        const { error: insertError } = await supabase
+          .from('cart_items')
+          .insert([
+            {
+              cart_id: cartData.id,
+              product_id: product.id,
+              quantity: qty,
+            },
+          ]);
+
+        if (insertError) {
+          console.error('Error adding cart item:', insertError);
+          return;
+        }
+      }
+
+      // Refresh cart length
+      const { data: updatedCartItems } = await supabase
+        .from('cart_items')
+        .select('*')
+        .eq('cart_id', cartData.id);
+
+      // Update state cart dengan data terbaru
+      setCart(updatedCartItems);
+
+      // Tampilkan pesan bahwa produk berhasil ditambahkan ke cart
+      setAlertMessage(`${product.name} added to the cart!`);
       setShowAlert(true);
       setTimeout(() => setShowAlert(false), 3000);
-      return; // Jika stok habis, hentikan proses
-    }
-
-    // Cek apakah stok mencukupi sebelum menambahkan ke cart
-    if (product.stock < qty) {
-      setAlertMessage(`Insufficient stock for ${product.name}!`);
+    } catch (err) {
+      console.error('Error adding to cart:', err);
+      setAlertMessage('Something went wrong. Please try again.');
       setShowAlert(true);
       setTimeout(() => setShowAlert(false), 3000);
-      return; // Jika stok tidak mencukupi, hentikan proses
     }
-
-    const existingProductIndex = cart.findIndex(
-      (item) => item.id === product.id
-    );
-
-    if (existingProductIndex !== -1) {
-      // Jika produk sudah ada di cart, tambahkan qty dan hitung ulang harga total
-      const updatedCart = [...cart];
-      updatedCart[existingProductIndex].qty += qty;
-      updatedCart[existingProductIndex].totalPrice =
-        updatedCart[existingProductIndex].price *
-        updatedCart[existingProductIndex].qty;
-      setCart(updatedCart);
-    } else {
-      // Jika produk belum ada di cart, tambahkan dengan qty sesuai input
-      const newProduct = {
-        ...product,
-        qty,
-        totalPrice: product.price * qty,
-      };
-      setCart([...cart, newProduct]);
-    }
-
-    // Kurangi stok barang berdasarkan qty yang ditambahkan
-    const updatedProducts = products.map((p) =>
-      p.id === product.id ? { ...p, stock: p.stock - qty } : p
-    );
-    setProducts(updatedProducts);
-
-    // Tampilkan alert saat produk berhasil ditambahkan
-    setAlertMessage(`${product.name} added to the cart!`);
-    setShowAlert(true);
-    setTimeout(() => {
-      setShowAlert(false); // Sembunyikan alert setelah 3 detik
-    }, 3000);
   };
 
   const [cart, setCart] = useState([]);
@@ -151,21 +164,26 @@ const ProductPage = () => {
   const [isOpenCart, setIsOpenCart] = useState(false);
 
   const [cates, setCates] = useState('all');
+  const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState([]);
 
   useEffect(() => {
-    console.log(cates); // Log when cates state changes
+    const loadCategories = async () => {
+      const fetchCategories = await fetchCategoeries();
+      setCategories(fetchCategories);
+      setLoading(false);
+    };
+
+    const loadProducts = async () => {
+      const fetchedProducts = await fetchProducts();
+      setProducts(fetchedProducts);
+      setLoading(false);
+    };
+    loadCategories();
+    loadProducts(); // Log when cates state changes
   }, [cates]);
 
-  const categories = [
-    {
-      id: '01',
-      name: 'coffee',
-    },
-    {
-      id: '02',
-      name: 'non coffee',
-    },
-  ];
+  // Dependency array for cates state
 
   const [iconChevron, setIconChevron] = useState(false);
 
@@ -228,7 +246,7 @@ const ProductPage = () => {
                 <div key={i} className="py-2">
                   <div
                     onClick={() => {
-                      setCates(category.name);
+                      setCates(category.id);
                       setIconChevron(!iconChevron);
                     }}
                     className="sm:text-sm text-xs ease-in-out text-slate-600 uppercase font-semibold p-2 duration-300 cursor-pointer w-full hover:bg-slate-200 rounded-md"
@@ -239,7 +257,7 @@ const ProductPage = () => {
               ))}
             </div>
           ) : (
-            ''
+            loading
           )}
         </div>
         <div className="flex flex-row gap-2 items-end borders sm:py-8 py-4 px-2">
@@ -256,14 +274,16 @@ const ProductPage = () => {
         </div>
         <div className="grid sm:grid-cols-4 gap-8">
           {products
-            .filter((product) => cates === 'all' || product.category === cates) // Show all products if 'cates' is 'all'
+            .filter(
+              (product) => cates === 'all' || product.category_id === cates
+            ) // Show all products if 'cates' is 'all'
             .map((product) => (
               <div
                 key={product.id}
                 className="border rounded-lg shadow-md bg-white hover:shadow-lg transition-shadow"
               >
                 <img
-                  src={product.link}
+                  src={product.image_url}
                   className="w-full rounded-t-lg h-[20rem] object-cover"
                   alt={product.name}
                 />

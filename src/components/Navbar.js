@@ -10,12 +10,69 @@ import {
   faSearch,
 } from '@fortawesome/free-solid-svg-icons';
 import { usePathname, useRouter } from 'next/navigation';
+import supabase from '@/app/lib/Supabase';
 
 const Navbar = ({ cart, setIsOpenCart, isOpenCart, setCart }) => {
   const [isOpenMenu, setIsOpenMenu] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-
   useEffect(() => {
+    const fetchCart = async () => {
+      try {
+        // Mendapatkan informasi cart untuk pengguna yang sedang login
+        const { data: globalUser, error: globalUserError } =
+          await supabase.auth.getUser();
+        if (globalUserError) {
+          console.error('Error fetching user:', globalUserError);
+          return;
+        }
+        const userEmail = globalUser.user.email; // Mendapatkan email pengguna
+
+        // Mendapatkan user_id dari tabel users berdasarkan email
+        const { data: publicUser, error: publicUserError } = await supabase
+          .from('users')
+          .select('id')
+          .eq('email', userEmail)
+          .single();
+
+        if (publicUserError) {
+          console.error('Error fetching users items:', publicUserError);
+          return;
+        }
+
+        const userId = publicUser.id;
+
+        // Mendapatkan cart berdasarkan user_id
+        const { data: cartData, error: cartError } = await supabase
+          .from('cart')
+          .select('id')
+          .eq('user_id', userId)
+          .single();
+
+        if (cartError) {
+          console.error('Error fetching cart:', cartError);
+          return;
+        }
+
+        // Mendapatkan item dalam cart
+        const { data: cartItems, error: cartItemsError } = await supabase
+          .from('cart_items')
+          .select('*')
+          .eq('cart_id', cartData.id);
+
+        if (cartItemsError) {
+          console.error('Error fetching cart items:', cartItemsError);
+          return;
+        }
+
+        // Set state cart dengan data cart items
+        setCart(cartItems);
+      } catch (error) {
+        console.error('Error fetching cart:', error);
+      }
+    };
+
+    fetchCart();
+
     const handleScroll = () => {
       if (window.scrollY > 50) {
         setIsScrolled(true);
@@ -23,8 +80,6 @@ const Navbar = ({ cart, setIsOpenCart, isOpenCart, setCart }) => {
         setIsScrolled(false);
       }
     };
-
-    console.log(isOpenCart);
 
     // Add scroll event listener
     window.addEventListener('scroll', handleScroll);
@@ -96,7 +151,7 @@ const Navbar = ({ cart, setIsOpenCart, isOpenCart, setCart }) => {
           <div className={getActiveClass('/blog')}>
             <Link href="/blog">Blog</Link>
           </div>
-          <div className={getActiveClass('#contact')}>
+          <div className={getActiveClass('/contact')}>
             <Link href="/contact">Contact</Link>
           </div>
         </div>
@@ -229,7 +284,7 @@ const Navbar = ({ cart, setIsOpenCart, isOpenCart, setCart }) => {
         <div className={getActiveClass('/blog')}>
           <Link href="/blog">Blog</Link>
         </div>
-        <div className={getActiveClass('#contact')}>
+        <div className={getActiveClass('/contact')}>
           <Link href="/contact">Contact</Link>
         </div>
         <div

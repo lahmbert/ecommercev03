@@ -1,3 +1,11 @@
+'use client';
+
+import { BlogProvider } from '../Context/BlogContext'; // Import the BlogProvider
+
 export default function BlogLayout({ children }) {
-  return <div>{children}</div>;
+  return (
+    <BlogProvider>
+      <div>{children}</div>
+    </BlogProvider>
+  );
 }
