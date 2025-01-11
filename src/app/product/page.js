@@ -15,6 +15,23 @@ import { fetchCategoeries } from '@/api/fetchcategory';
 import { fetchProducts } from '@/api/fetchproduct';
 
 const ProductPage = () => {
+  const [cart, setCart] = useState([]);
+
+  const [isOpenCart, setIsOpenCart] = useState(false);
+
+  const [cates, setCates] = useState('all');
+  const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState([]);
+
+  const [iconChevron, setIconChevron] = useState(false);
+
+  const handleChevron = () => {
+    if (!iconChevron) {
+      setIconChevron(true);
+    } else {
+      setIconChevron(false);
+    }
+  };
   const [showAlert, setShowAlert] = useState(false); // State for showing the alert
   const [alertMessage, setAlertMessage] = useState(''); // State for the alert message
   const [valueQty, setValueQty] = useState({});
@@ -32,7 +49,8 @@ const ProductPage = () => {
   const addToCart = async (product, qty) => {
     try {
       // Mengambil informasi pengguna dari Supabase Auth
-      const { error: globalUserError } = await supabase.auth.getUser();
+      const { data: globalUser, error: globalUserError } =
+        await supabase.auth.getUser();
       if (globalUserError) {
         setAlertMessage('Please Login First!.');
         setShowAlert(true);
@@ -54,7 +72,6 @@ const ProductPage = () => {
       }
 
       const userId = publicUser.id; // ID pengguna
-      console.log('User ID:', userId); // Debug: pastikan userId sudah benar
 
       // Cek apakah produk habis
       if (product.stock <= 0) {
@@ -160,14 +177,6 @@ const ProductPage = () => {
     }
   };
 
-  const [cart, setCart] = useState([]);
-
-  const [isOpenCart, setIsOpenCart] = useState(false);
-
-  const [cates, setCates] = useState('all');
-  const [loading, setLoading] = useState(true);
-  const [categories, setCategories] = useState([]);
-
   useEffect(() => {
     const loadCategories = async () => {
       const fetchCategories = await fetchCategoeries();
@@ -184,24 +193,15 @@ const ProductPage = () => {
     loadProducts(); // Log when cates state changes
   }, [cates]);
 
-  // Dependency array for cates state
-
-  const [iconChevron, setIconChevron] = useState(false);
-
-  const handleChevron = () => {
-    if (!iconChevron) {
-      setIconChevron(true);
-    } else {
-      setIconChevron(false);
-    }
-  };
   return (
     <div>
       <Navbar
         cart={cart}
         isOpenCart={isOpenCart}
+        products={products}
         setIsOpenCart={setIsOpenCart}
         setCart={setCart}
+        setProducts={setProducts}
       />
       {/* Inner Section */}
       <section>
