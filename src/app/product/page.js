@@ -32,12 +32,11 @@ const ProductPage = () => {
   const addToCart = async (product, qty) => {
     try {
       // Mengambil informasi pengguna dari Supabase Auth
-      const { data: globalUser, error: globalUserError } =
-        await supabase.auth.getUser();
+      const { error: globalUserError } = await supabase.auth.getUser();
       if (globalUserError) {
-        setAlertMessage('Silahkan Login');
-        showAlert(true);
-        console.error('Error fetching user:', globalUserError);
+        setAlertMessage('Please Login First!.');
+        setShowAlert(true);
+        setTimeout(() => setShowAlert(false), 3000);
         return;
       }
       const userEmail = globalUser.user.email; // Mendapatkan email pengguna
