@@ -18,7 +18,9 @@ const Cart = ({ cart, setIsOpenCart, removeFromCart }) => (
     {/* Make this part scrollable */}
     <div className="overflow-y-auto max-h-[calc(100vh-200px)]">
       {cart?.length === 0 ? (
-        <span className="py-4 flex justify-center">Your cart is empty.</span>
+        <span className="py-4 flex text-black justify-center">
+          Your cart is empty.
+        </span>
       ) : (
         cart?.map((item, index) => (
           <div
