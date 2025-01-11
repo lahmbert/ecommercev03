@@ -206,7 +206,12 @@ const AboutPage = () => {
               decaffeinated.
             </p>
             <div className="sm:w-1/3 w-1/2">
-              <Button size="medium" color="default" label="Find Near You" />
+              <Button
+                size="medium"
+                color="default"
+                className="rounded-md"
+                label="Find Near You"
+              />
             </div>
           </div>
         </div>
