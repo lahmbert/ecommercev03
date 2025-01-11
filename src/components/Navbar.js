@@ -9,7 +9,7 @@ import {
   faClose,
   faSearch,
 } from '@fortawesome/free-solid-svg-icons';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 const Navbar = ({ cart, setIsOpenCart, isOpenCart, setCart }) => {
   const [isOpenMenu, setIsOpenMenu] = useState(false);
@@ -46,9 +46,10 @@ const Navbar = ({ cart, setIsOpenCart, isOpenCart, setCart }) => {
   const handleOpenMenu = () => {
     setIsOpenMenu(!isOpenMenu);
   };
+  const router = useRouter();
 
   const handleClick = () => {
-    alert('Button clicked!');
+    return router.push('/auth/register');
   };
 
   const removeFromCart = (productId) => {
@@ -199,6 +200,9 @@ const Navbar = ({ cart, setIsOpenCart, isOpenCart, setCart }) => {
           className="sm:hidden flex cursor-pointer"
         >
           <FontAwesomeIcon icon={faCartShopping} />
+        </div>
+        <div className="absolute sm:hidden flex top-[26px] right-6 px-[5.5px] py-[1px] bg-green-500 text-[9px] rounded-full">
+          {cart.length}
         </div>
       </div>
 

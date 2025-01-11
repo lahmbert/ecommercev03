@@ -366,12 +366,14 @@ export default function HomePage() {
               roasters.
             </div>
             <div className="w-1/2">
-              <Button
-                color="default"
-                className="rounded-lg"
-                size="medium"
-                label="Learn More"
-              />
+              <a href="/about">
+                <Button
+                  color="default"
+                  className="rounded-lg"
+                  size="medium"
+                  label="Learn More"
+                />
+              </a>
             </div>
           </div>
           <div className="col-span-5 flex sm:flex-row flex-col items-center justify-around gap-6 text-center">
@@ -442,12 +444,14 @@ export default function HomePage() {
               </p>
             </div>
             <div className="w-1/2">
-              <Button
-                color="default"
-                className="rounded-lg"
-                size="medium"
-                label="Learn More"
-              />
+              <a href="/product">
+                <Button
+                  color="default"
+                  className="rounded-lg"
+                  size="medium"
+                  label="Learn More"
+                />
+              </a>
             </div>
           </div>
           <div className="sm:grid col-span-4 sm:py-12 flex flex-col justify-center items-center sm:grid-cols-2 gap-6">
@@ -640,12 +644,12 @@ export default function HomePage() {
                 </div>
                 <div className="p-8">
                   <div className="text-lg font-semibold">
-                    <a href="#blog-single">{blog.title}</a>
+                    <a href={`/blog`}>{blog.title}</a>
                   </div>
                   <p className="mt-3 text-gray-600">{blog.description}</p>
                   <div className="mt-4 flex justify-between items-center">
                     <div className="bg-green-500 hover:bg-green-600 sm:text-base text-sm duration-300 rounded-md px-4 py-2 text-white">
-                      <a href="#blog-single" className="text-white">
+                      <a href={`/blog`} className="text-white">
                         Read more
                       </a>
                     </div>
@@ -712,7 +716,7 @@ export default function HomePage() {
             <p className="mt-4 flex sm:flex-row flex-col text-gray-500 sm:gap-1 gap-2 justify-center pt-3 ">
               Our team members also write interesting articles on everything
               concerning coffee.
-              <a className="text-green-500 font-semibold" href="#blog">
+              <a className="text-green-500 font-semibold" href="/blog">
                 View All blog posts <FontAwesomeIcon icon={faArrowRight} />
               </a>
             </p>

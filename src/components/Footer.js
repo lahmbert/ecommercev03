@@ -1,4 +1,9 @@
 import {
+  faFacebookSquare,
+  faInstagram,
+  faTwitter,
+} from '@fortawesome/free-brands-svg-icons';
+import {
   faAngleUp,
   faCoffee,
   faPaperPlane,
@@ -55,6 +60,23 @@ const Footer = () => {
                 brands and roasters by providing our guests the unique
                 opportunity to try coffee drinks.
               </p>
+              <div className="pt-4 flex gap-4 text-green-500">
+                <FontAwesomeIcon
+                  size="2x"
+                  className="cursor-pointer hover:text-green-800 duration-300"
+                  icon={faFacebookSquare}
+                />
+                <FontAwesomeIcon
+                  size="2x"
+                  className="cursor-pointer hover:text-green-800 duration-300"
+                  icon={faTwitter}
+                />
+                <FontAwesomeIcon
+                  size="2x"
+                  className="cursor-pointer hover:text-green-800 duration-300"
+                  icon={faInstagram}
+                />
+              </div>
             </div>
             <div className="sm:col-span-3 flex flex-col sm:grid sm:grid-cols-2 gap-4">
               <div className="">

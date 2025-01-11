@@ -15,6 +15,8 @@ import React, { useEffect, useState } from 'react';
 const ProductPage = () => {
   const [showAlert, setShowAlert] = useState(false); // State for showing the alert
   const [alertMessage, setAlertMessage] = useState(''); // State for the alert message
+  const [valueQty, setValueQty] = useState({});
+
   const ourProduct = [
     {
       id: '01',
@@ -22,7 +24,7 @@ const ProductPage = () => {
       price: '80000',
       category: 'non coffee',
       link: '/images/a1.jpg',
-      stock: '10',
+      stock: '0',
     },
     {
       id: '02',
@@ -82,34 +84,65 @@ const ProductPage = () => {
     },
   ];
 
-  const addToCart = (product) => {
+  const [products, setProducts] = useState(ourProduct);
+
+  const handleQtyChange = (productId, newQty) => {
+    // Update valueQty untuk produk tertentu
+    setValueQty((prev) => ({
+      ...prev,
+      [productId]: Math.max(0, newQty), // Pastikan nilai tidak negatif
+    }));
+  };
+
+  const addToCart = (product, qty) => {
+    if (product.stock <= 0) {
+      setAlertMessage(`${product.name} is out of stock!`);
+      setShowAlert(true);
+      setTimeout(() => setShowAlert(false), 3000);
+      return; // Jika stok habis, hentikan proses
+    }
+
+    // Cek apakah stok mencukupi sebelum menambahkan ke cart
+    if (product.stock < qty) {
+      setAlertMessage(`Insufficient stock for ${product.name}!`);
+      setShowAlert(true);
+      setTimeout(() => setShowAlert(false), 3000);
+      return; // Jika stok tidak mencukupi, hentikan proses
+    }
+
     const existingProductIndex = cart.findIndex(
       (item) => item.id === product.id
     );
 
     if (existingProductIndex !== -1) {
-      // If product exists, update its qty and total price
+      // Jika produk sudah ada di cart, tambahkan qty dan hitung ulang harga total
       const updatedCart = [...cart];
-      updatedCart[existingProductIndex].qty += 1;
+      updatedCart[existingProductIndex].qty += qty;
       updatedCart[existingProductIndex].totalPrice =
         updatedCart[existingProductIndex].price *
         updatedCart[existingProductIndex].qty;
       setCart(updatedCart);
     } else {
-      // If product doesn't exist, add it to the cart with qty 1 and calculate total price
+      // Jika produk belum ada di cart, tambahkan dengan qty sesuai input
       const newProduct = {
         ...product,
-        qty: 1,
-        totalPrice: parseInt(product.price, 10),
+        qty,
+        totalPrice: product.price * qty,
       };
       setCart([...cart, newProduct]);
     }
 
-    // Show the alert when product is added
+    // Kurangi stok barang berdasarkan qty yang ditambahkan
+    const updatedProducts = products.map((p) =>
+      p.id === product.id ? { ...p, stock: p.stock - qty } : p
+    );
+    setProducts(updatedProducts);
+
+    // Tampilkan alert saat produk berhasil ditambahkan
     setAlertMessage(`${product.name} added to the cart!`);
     setShowAlert(true);
     setTimeout(() => {
-      setShowAlert(false); // Hide the alert after 3 seconds
+      setShowAlert(false); // Sembunyikan alert setelah 3 detik
     }, 3000);
   };
 
@@ -222,34 +255,53 @@ const ProductPage = () => {
           </span>
         </div>
         <div className="grid sm:grid-cols-4 gap-8">
-          {ourProduct
+          {products
             .filter((product) => cates === 'all' || product.category === cates) // Show all products if 'cates' is 'all'
             .map((product) => (
-              <div key={product.id} className="border rounded-lg shadow-md">
+              <div
+                key={product.id}
+                className="border rounded-lg shadow-md bg-white hover:shadow-lg transition-shadow"
+              >
                 <img
                   src={product.link}
-                  className="w-full rounded-t-md h-[20rem]"
+                  className="w-full rounded-t-lg h-[20rem] object-cover"
                   alt={product.name}
                 />
-                <div className="p-4 flex flex-col">
-                  <span className="sm:text-2xl text-xl font-bold">
+                <div className="p-4 flex flex-col gap-3">
+                  <span className="text-xl font-bold text-gray-800">
                     {product.name}
                   </span>
-                  <span className="pt-2 text-sm font-semibold text-slate-400">
+                  <span className="text-sm font-medium text-gray-500">
                     Stock: {product.stock}
                   </span>
-                  <div className="flex items-center py-4 justify-between">
-                    <span className="sm:text-sm text-xs font-semibold">
-                      Rp {product.price}
+                  <div className="flex items-center justify-between py-2">
+                    <span className="text-base font-semibold text-green-600">
+                      Rp {product.price.toLocaleString('id-ID')}
                     </span>
-                    <Button
-                      onClick={() => addToCart(product)}
-                      color="default"
-                      className="rounded-md capitalize"
-                      size="small"
-                      label={<FontAwesomeIcon icon={faShoppingCart} />}
+                    <input
+                      type="number"
+                      placeholder="0"
+                      className="focus:outline-none bg-gray-100 rounded-sm sm:pl-4 text-sm w-16 border border-gray-300 text-center"
+                      value={valueQty[product.id] || 1}
+                      onChange={(e) =>
+                        handleQtyChange(product.id, parseInt(e.target.value))
+                      }
+                      min={1}
                     />
                   </div>
+                  <Button
+                    onClick={() =>
+                      addToCart(product, valueQty[product.id] || 1)
+                    }
+                    color="default"
+                    className="rounded-md bg-green-500 mb-4 hover:bg-green-600 text-white capitalize py-2"
+                    size="small"
+                    label={
+                      <div className="flex gap-2 items-center justify-center">
+                        <FontAwesomeIcon icon={faShoppingCart} /> Add to Cart
+                      </div>
+                    }
+                  />
                 </div>
               </div>
             ))}
