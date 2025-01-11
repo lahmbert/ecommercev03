@@ -129,7 +129,7 @@ const Navbar = ({ cart, setIsOpenCart, isOpenCart, setCart }) => {
 
                   {/* Make this part scrollable */}
                   <div className="overflow-y-auto max-h-[calc(100vh-200px)]">
-                    {cart.length === 0 ? (
+                    {cart?.length === 0 ? (
                       <span>Your cart is empty.</span>
                     ) : (
                       cart.map((product, index) => (

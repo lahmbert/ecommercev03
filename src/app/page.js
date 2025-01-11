@@ -222,7 +222,9 @@ export default function HomePage() {
     setCurrentSlide((prev) => (prev - 1 + totalSlides) % totalSlides);
   };
 
-  const [isVisible, setIsVisible] = useState(false);
+  const [cart, setCart] = useState([]);
+
+  const [isOpenCart, setIsOpenCart] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(nextSlide, 10000);
@@ -234,7 +236,12 @@ export default function HomePage() {
 
   return (
     <div className="bg-gray-50">
-      <Navbar />
+      <Navbar
+        cart={cart}
+        isOpenCart={isOpenCart}
+        setIsOpenCart={setIsOpenCart}
+        setCart={setCart}
+      />
       {/* Banner Section */}
       <section className="-translate-y-[6.3rem] ease-in-out duration-700 ">
         <div

@@ -97,7 +97,11 @@ const ProductPage = () => {
       setCart(updatedCart);
     } else {
       // If product doesn't exist, add it to the cart with qty 1 and calculate total price
-      const newProduct = { ...product, qty: 1, totalPrice: product.price };
+      const newProduct = {
+        ...product,
+        qty: 1,
+        totalPrice: parseInt(product.price, 10),
+      };
       setCart([...cart, newProduct]);
     }
 
@@ -129,6 +133,7 @@ const ProductPage = () => {
       name: 'non coffee',
     },
   ];
+
   const [iconChevron, setIconChevron] = useState(false);
 
   const handleChevron = () => {

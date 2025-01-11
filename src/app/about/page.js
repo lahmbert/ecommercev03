@@ -13,9 +13,13 @@ import { faCoffee, faGlassMartini } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import Image from 'next/image';
 import Link from 'next/link';
-import React from 'react';
+import React, { useState } from 'react';
 
 const AboutPage = () => {
+  const [cart, setCart] = useState([]);
+
+  const [isOpenCart, setIsOpenCart] = useState(false);
+
   const fearureAbout = [
     {
       icon: faCoffee,
@@ -60,9 +64,15 @@ const AboutPage = () => {
       link: '#',
     },
   ];
+
   return (
     <div>
-      <Navbar />
+      <Navbar
+        cart={cart}
+        isOpenCart={isOpenCart}
+        setIsOpenCart={setIsOpenCart}
+        setCart={setCart}
+      />
       {/* Banner Section */}
       <section>
         <div className="absolute -z-10 -translate-y-[6.5rem]">
