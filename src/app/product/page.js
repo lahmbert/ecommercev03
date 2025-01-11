@@ -13,17 +13,19 @@ import React, { useEffect, useState } from 'react';
 import supabase from '../lib/Supabase';
 import { fetchCategoeries } from '@/api/fetchcategory';
 import { fetchProducts } from '@/api/fetchproduct';
+import { fetchCart } from '@/api/fetchCart';
 
 const ProductPage = () => {
-  const [cart, setCart] = useState([]);
-
   const [isOpenCart, setIsOpenCart] = useState(false);
-
   const [cates, setCates] = useState('all');
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState([]);
-
   const [iconChevron, setIconChevron] = useState(false);
+  const [showAlert, setShowAlert] = useState(false); // State for showing the alert
+  const [alertMessage, setAlertMessage] = useState(''); // State for the alert message
+  const [valueQty, setValueQty] = useState({});
+  const [products, setProducts] = useState([]);
+  const [cart, setCart] = useState([]);
 
   const handleChevron = () => {
     if (!iconChevron) {
@@ -32,11 +34,6 @@ const ProductPage = () => {
       setIconChevron(false);
     }
   };
-  const [showAlert, setShowAlert] = useState(false); // State for showing the alert
-  const [alertMessage, setAlertMessage] = useState(''); // State for the alert message
-  const [valueQty, setValueQty] = useState({});
-
-  const [products, setProducts] = useState([]);
 
   const handleQtyChange = (productId, newQty) => {
     // Update valueQty untuk produk tertentu
@@ -156,19 +153,13 @@ const ProductPage = () => {
         }
       }
 
-      // Refresh cart length
-      const { data: updatedCartItems } = await supabase
-        .from('cart_items')
-        .select('*')
-        .eq('cart_id', cartData.id);
-
       // Update state cart dengan data terbaru
-      setCart(updatedCartItems);
 
       // Tampilkan pesan bahwa produk berhasil ditambahkan ke cart
       setAlertMessage(`${product.name} added to the cart!`);
       setShowAlert(true);
       setTimeout(() => setShowAlert(false), 3000);
+      fetchCart(setCart);
     } catch (err) {
       console.error('Error adding to cart:', err);
       setAlertMessage('Something went wrong. Please try again.');
@@ -197,10 +188,10 @@ const ProductPage = () => {
     <div>
       <Navbar
         cart={cart}
+        setCart={setCart}
         isOpenCart={isOpenCart}
         products={products}
         setIsOpenCart={setIsOpenCart}
-        setCart={setCart}
         setProducts={setProducts}
       />
       {/* Inner Section */}
@@ -308,6 +299,7 @@ const ProductPage = () => {
                         handleQtyChange(product.id, parseInt(e.target.value))
                       }
                       min={1}
+                      max={product.stock}
                     />
                   </div>
                   <Button

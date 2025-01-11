@@ -4,112 +4,18 @@ import Link from 'next/link';
 import React, { useEffect, useState } from 'react';
 import Button from './Button';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-  faCartShopping,
-  faClose,
-  faSearch,
-} from '@fortawesome/free-solid-svg-icons';
+import { faCartShopping, faSearch } from '@fortawesome/free-solid-svg-icons';
 import { usePathname, useRouter } from 'next/navigation';
 import supabase from '@/app/lib/Supabase';
-import { fetchProducts } from '@/api/fetchproduct';
+import Cart from './Cart';
+import { fetchCart } from '@/api/fetchCart';
 
-const Navbar = ({ cart, setIsOpenCart, isOpenCart, setCart }) => {
+const Navbar = ({ cart, setCart, setIsOpenCart, isOpenCart }) => {
   const [isOpenMenu, setIsOpenMenu] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
-  const fetchCart = async () => {
-    try {
-      // Mendapatkan informasi pengguna yang sedang login
-      const { data: globalUser, error: globalUserError } =
-        await supabase.auth.getUser();
-      if (globalUserError) {
-        console.error('Error fetching user:', globalUserError);
-        return;
-      }
-
-      if (!globalUser || !globalUser.user) {
-        console.error('No user is logged in.');
-        return;
-      }
-
-      const userEmail = globalUser.user.email;
-
-      // Mendapatkan user_id dari tabel users berdasarkan email
-      const { data: publicUser, error: publicUserError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', userEmail)
-        .single();
-
-      if (publicUserError || !publicUser) {
-        console.error(
-          'Error fetching user data from users table:',
-          publicUserError || 'No user found'
-        );
-        return;
-      }
-
-      const userId = publicUser.id;
-
-      // Mendapatkan cart berdasarkan user_id
-      let { data: cartData, error: cartError } = await supabase
-        .from('cart')
-        .select('id')
-        .eq('user_id', userId)
-        .single();
-
-      if (cartError || !cartData) {
-        console.error('No cart found, creating a new cart.');
-        const { data: newCart, error: newCartError } = await supabase
-          .from('cart')
-          .insert([{ user_id: userId }])
-          .select()
-          .single();
-
-        if (newCartError) {
-          console.error('Error creating new cart:', newCartError);
-          return;
-        }
-
-        cartData = newCart;
-      }
-
-      // Mendapatkan item dalam cart
-      const { data: cartItems, error: cartItemsError } = await supabase
-        .from('cart_items')
-        .select(
-          `
-          id,
-          quantity,
-          products (
-            id,
-            name,
-            price,
-            image_url
-          )
-        `
-        )
-        .eq('cart_id', cartData.id);
-
-      if (cartItemsError) {
-        console.error('Error fetching cart items:', cartItemsError);
-        return;
-      }
-
-      if (!cartItems || cartItems.length === 0) {
-        setCart([]);
-        return;
-      }
-
-      // Set state cart dengan data cart items
-
-      setCart(cartItems);
-    } catch (error) {
-      console.error('Error fetching cart:', error);
-    }
-  };
   useEffect(() => {
-    fetchCart();
+    fetchCart(setCart);
 
     const handleScroll = () => {
       if (window.scrollY > 50) {
@@ -206,7 +112,7 @@ const Navbar = ({ cart, setIsOpenCart, isOpenCart, setCart }) => {
       }
 
       // Memanggil fungsi fetchCart untuk memperbarui data cart
-      fetchCart(); // Memuat ulang data cart setelah item dihapus
+      fetchCart(setCart); // Memuat ulang data cart setelah item dihapus
     } catch (error) {
       console.error('Error removing item from cart:', error);
     }
@@ -271,78 +177,11 @@ const Navbar = ({ cart, setIsOpenCart, isOpenCart, setCart }) => {
           {isOpenCart && (
             <div className="overflow-auto">
               <div className="absolute sm:flex hidden z-10 h-screen w-full top-0 right-0 bg-black bg-opacity-50">
-                <div className="absolute z-20 p-8 h-screen w-full sm:w-1/3 top-0 right-0 bg-white">
-                  <div className="flex text-black justify-between items-center">
-                    <span className="sm:text-2xl text-lg font-bold">
-                      Your Cart
-                    </span>
-                    <span
-                      onClick={() => setIsOpenCart(false)}
-                      className="text-red-500 cursor-pointer"
-                    >
-                      <FontAwesomeIcon size="2x" icon={faClose} />
-                    </span>
-                  </div>
-
-                  {/* Make this part scrollable */}
-                  <div className="overflow-y-auto max-h-[calc(100vh-200px)]">
-                    {cart?.length === 0 ? (
-                      <span className="text-black py-4 flex justify-center">
-                        Your cart is empty.
-                      </span>
-                    ) : (
-                      cart.map((item, index) => (
-                        <div
-                          key={index}
-                          className="flex py-4 my-4 text-black border-b-2 border-black justify-between items-start"
-                        >
-                          <div className="flex items-start gap-2 justify-between">
-                            {item.products?.image_url ? (
-                              <img
-                                src={item.products.image_url} // Properti relasi dari Supabase
-                                alt={item.products.name}
-                                className="w-14 h-auto"
-                              />
-                            ) : null}
-                            <div className="flex w-auto flex-col">
-                              <div className="flex font-bold text-2xl flex-wrap">
-                                {item.products.name}
-                              </div>
-                              <div className="w-1/3 flex justify-between pt-2 items-center">
-                                <div className="text-xs text-slate-500">
-                                  Price: {item.products.price}
-                                </div>
-                                <div className="text-xs text-slate-500">
-                                  Qty : {item.quantity}{' '}
-                                  {/* Menggunakan quantity dari tabel cart_items */}
-                                </div>
-                              </div>
-                              <div className="text-xs text-slate-500">
-                                Total Price :{' '}
-                                {item.products.price * item.quantity}
-                              </div>
-                            </div>
-                          </div>
-                          <div
-                            onClick={() => removeFromCart(item.products.id)} // Menggunakan item.id dari tabel cart_items
-                            className="text-xs cursor-pointer underline text-slate-500"
-                          >
-                            Remove
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-
-                  <div className="flex justify-center pt-2">
-                    <Button
-                      size="medium"
-                      color="default"
-                      className="rounded-md"
-                      label="Continue"
-                    />
-                  </div>
-                </div>
+                <Cart
+                  cart={cart}
+                  setIsOpenCart={setIsOpenCart}
+                  removeFromCart={removeFromCart}
+                />
               </div>
             </div>
           )}
@@ -407,73 +246,11 @@ const Navbar = ({ cart, setIsOpenCart, isOpenCart, setCart }) => {
       {isOpenCart && (
         <div className="overflow-auto">
           <div className="absolute sm:hidden flex z-10 h-screen w-full top-0 right-0 bg-black bg-opacity-50">
-            <div className="absolute z-20 p-8 h-screen w-full sm:w-1/3 top-0 right-0 bg-white">
-              <div className="flex text-black justify-between items-center">
-                <span className="sm:text-2xl text-lg font-bold">Your Cart</span>
-                <span
-                  onClick={() => setIsOpenCart(false)}
-                  className="text-red-500 cursor-pointer"
-                >
-                  <FontAwesomeIcon size="2x" icon={faClose} />
-                </span>
-              </div>
-
-              {/* Make this part scrollable */}
-              <div className="overflow-y-auto max-h-[calc(100vh-200px)]">
-                {cart?.length === 0 ? (
-                  <span className="py-4 flex justify-center">
-                    Your cart is empty.
-                  </span>
-                ) : (
-                  cart.map((item, index) => (
-                    <div
-                      key={index}
-                      className="flex py-4 my-4 text-black border-b-2 border-black justify-between items-start"
-                    >
-                      <div className="flex items-start gap-2 justify-between">
-                        <img
-                          src={item.products.image_url} // Properti relasi dari Supabase
-                          alt={item.products.name}
-                          className="w-14 h-auto"
-                        />
-                        <div className="flex w-auto flex-col">
-                          <div className="flex font-bold text-2xl flex-wrap">
-                            {item.products.name}
-                          </div>
-                          <div className="w-1/3 flex justify-between pt-2 items-center">
-                            <div className="text-xs text-slate-500">
-                              Price: {item.products.price}
-                            </div>
-                            <div className="text-xs text-slate-500">
-                              Qty : {item.quantity}{' '}
-                              {/* Menggunakan quantity dari tabel cart_items */}
-                            </div>
-                          </div>
-                          <div className="text-xs text-slate-500">
-                            Total Price : {item.products.price * item.quantity}
-                          </div>
-                        </div>
-                      </div>
-                      <div
-                        onClick={() => removeFromCart(item.products.id)} // Menggunakan item.id dari tabel cart_items
-                        className="text-xs cursor-pointer underline text-slate-500"
-                      >
-                        Remove
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              <div className="flex justify-center pt-2">
-                <Button
-                  size="medium"
-                  color="default"
-                  className="rounded-md"
-                  label="Continue"
-                />
-              </div>
-            </div>
+            <Cart
+              cart={cart}
+              setIsOpenCart={setIsOpenCart}
+              removeFromCart={removeFromCart}
+            />
           </div>
         </div>
       )}
