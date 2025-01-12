@@ -1,8 +1,10 @@
+// /api/fetchOrder.js
 import supabase from '@/app/lib/Supabase';
 
+// Fetch orders and order items for a specific user
 export const fetchOrder = async (setOrders) => {
   try {
-    // Fetch cart data seperti sebelumnya
+    // Fetch the user
     const { data: globalUser, error: globalUserError } =
       await supabase.auth.getUser();
     if (globalUserError) {
@@ -33,46 +35,91 @@ export const fetchOrder = async (setOrders) => {
 
     const userId = publicUser.id;
 
-    const { data: cartData, error: cartError } = await supabase
-      .from('cart')
-      .select('id')
-      .eq('user_id', userId)
-      .single();
-
-    if (cartError || !cartData) {
-      return;
-    }
-
-    // Mendapatkan semua order yang ada untuk user
-    const { data: orderItems, error: orderItemsError } = await supabase
+    const { data: orders, error: orderError } = await supabase
       .from('orders')
       .select(
-        `id,
-            user_id,
-            total_price,
-            status,
-            order_items (
-              id,
-              quantity,
-              price,
-              product_id,
-              products (
-                id,
-                name,
-                image_url
-              )
-            )`
+        `
+        id,
+        user_id,
+        total_price,
+        status,
+        order_items (
+          id,
+          quantity,
+          price,
+          product_id,
+          products (
+            id,
+            name,
+            image_url
+          )
+        )
+      `
       )
-      .eq('user_id', userId); // Menghilangkan `.single()` untuk mendapatkan banyak data
+      .eq('user_id', userId);
 
-    if (orderItemsError || !orderItems) {
-      console.error('Data tidak ada:', orderItemsError);
+    if (orderError) {
+      console.error('Error fetching orders:', orderError);
       return;
     }
 
-    // Memperbarui state orders dengan array dari orderItems
-    setOrders(orderItems);
+    // Set orders in state
+    setOrders(orders);
   } catch (err) {
-    console.error('Error fetching cart:', err);
+    console.error('Error fetching orders:', err);
+  }
+};
+
+// Delete order item from an order
+export const deleteOrderItem = async (orderId, itemId) => {
+  try {
+    // Deleting the order item from the 'order_items' table
+    const { error: deleteItemError } = await supabase
+      .from('order_items')
+      .delete()
+      .eq('id', itemId)
+      .eq('order_id', orderId);
+
+    if (deleteItemError) {
+      console.error('Error deleting order item:', deleteItemError);
+      throw deleteItemError;
+    }
+
+    return { message: 'Item deleted successfully' };
+  } catch (err) {
+    console.error('Error deleting order item:', err);
+    throw err;
+  }
+};
+
+// Delete the order entirely
+export const deleteOrder = async (orderId) => {
+  try {
+    // Delete all order items first
+    const { error: deleteItemsError } = await supabase
+      .from('order_items')
+      .delete()
+      .eq('order_id', orderId);
+
+    if (deleteItemsError) {
+      console.error('Error deleting order items:', deleteItemsError);
+      throw deleteItemsError;
+    }
+
+    // Delete the order itself
+    const { error: deleteOrderError } = await supabase
+      .from('orders')
+      .delete()
+      .eq('id', orderId);
+
+    if (deleteOrderError) {
+      console.error('Error deleting order:', deleteOrderError);
+      throw deleteOrderError;
+    }
+
+    return { message: 'Order and its items deleted successfully' };
+  } catch (err) {
+    console.error('Error deleting order:', err);
+    throw err;
   }
 };

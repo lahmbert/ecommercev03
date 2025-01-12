@@ -1,5 +1,5 @@
 'use client';
-import { fetchOrder } from '@/api/fetchOrder';
+import { fetchOrder, deleteOrder, deleteOrderItem } from '@/api/fetchOrder'; // Asumsi API deleteOrder dan deleteOrderItem
 import Footer from '@/components/Footer';
 import Navbar from '@/components/Navbar';
 import React, { useEffect, useState } from 'react';
@@ -12,7 +12,6 @@ const OrderPage = () => {
   const [error, setError] = useState(null); // Menambahkan state error
 
   useEffect(() => {
-    // Menambahkan loading state
     fetchOrder(setOrders)
       .then(() => setLoading(false))
       .catch((err) => {
@@ -48,6 +47,43 @@ const OrderPage = () => {
     );
   }
 
+  // Fungsi untuk menghapus item pesanan
+  const handleDeleteItem = (orderId, itemId) => {
+    deleteOrderItem(orderId, itemId)
+      .then(() => {
+        // Update orders setelah item dihapus
+        setOrders((prevOrders) =>
+          prevOrders.map((order) =>
+            order.id === orderId
+              ? {
+                  ...order,
+                  order_items: order.order_items.filter(
+                    (item) => item.id !== itemId
+                  ),
+                }
+              : order
+          )
+        );
+      })
+      .catch((err) => {
+        console.error('Error deleting item:', err);
+      });
+  };
+
+  // Fungsi untuk menghapus seluruh pesanan setelah item dihapus
+  const handleDeleteOrder = (orderId) => {
+    deleteOrder(orderId)
+      .then(() => {
+        // Update orders setelah pesanan dihapus
+        setOrders((prevOrders) =>
+          prevOrders.filter((order) => order.id !== orderId)
+        );
+      })
+      .catch((err) => {
+        console.error('Error deleting order:', err);
+      });
+  };
+
   // Fungsi untuk membuat pesan checkout ke WhatsApp
   const createWhatsAppMessage = () => {
     let message = `*Your Order Details*%0A%0A`;
@@ -77,7 +113,7 @@ const OrderPage = () => {
     });
 
     const encodedMessage = encodeURIComponent(message);
-    const phoneNumber = '085334679379'; // Ganti dengan nomor WhatsApp yang menerima pesan
+    const phoneNumber = 'YOUR_PHONE_NUMBER'; // Ganti dengan nomor WhatsApp yang menerima pesan
     return `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
   };
 
@@ -99,92 +135,123 @@ const OrderPage = () => {
       </section>
       <section className="sm:px-[12rem] p-8 bg-white">
         <div className="p-4">
-          <div className="flex flex-row gap-2 items-end borders sm:py-8 py-4 px-2">
+          <div className="flex flex-row gap-2 items-end sm:py-8 py-4 px-2">
             {/* Judul Order */}
             <span className="sm:text-2xl text-lg font-bold uppercase">
               Your Order
             </span>
             <span className="sm:text-sm text-xs pb-1 font-bold text-slate-400">
-              {orders.length} {orders.length === 1 ? 'Item' : 'Items'}{' '}
+              {orders.length} {orders.length === 1 ? 'Item' : 'Items'}
               {/* Menggunakan kondisi plural */}
             </span>
           </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full bg-white border border-gray-200">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="border px-4 py-2 text-left">Order ID</th>
-                  <th className="border px-4 py-2 text-left">Status</th>
-                  <th className="border px-4 py-2 text-right">Total Price</th>
-                  <th className="border px-4 py-2 text-left">Order Items</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.map((order) => (
-                  <tr key={order.id}>
-                    <td className="border px-4 py-2">{order.id}</td>
-                    <td className="border px-4 py-2">{order.status}</td>
-                    <td className="border px-4 py-2 text-right">
+
+          <div className="space-y-6">
+            {orders.map((order) => (
+              <div
+                key={order.id}
+                className="border border-gray-200 rounded-lg p-8 shadow-md"
+              >
+                <div className="flex justify-between items-center mb-4">
+                  <div className="mb-4">
+                    <span className="text-lg font-semibold">Total Price:</span>
+                    <span className="text-xl font-bold text-green-500">
                       Rp{' '}
                       {order.total_price.toLocaleString(undefined, {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                       })}
-                    </td>
-                    <td className="border px-4 py-2">
-                      <div className="space-y-4">
-                        {order.order_items?.length > 0 ? (
-                          order.order_items.map((item) => (
-                            <div
-                              key={item.id}
-                              className="flex items-center space-x-4 border-b pb-2"
-                            >
-                              <img
-                                src={item.products.image_url}
-                                alt={item.products.name}
-                                className="w-12 h-12 object-cover border rounded"
-                              />
-                              <div>
-                                <p className="font-medium">
-                                  {item.products.name}
-                                </p>
-                                <p className="text-sm text-gray-600">
-                                  Quantity: {item.quantity}
-                                </p>
-                                <p className="text-sm text-gray-600">
-                                  Price: Rp{' '}
-                                  {item.price.toLocaleString(undefined, {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2,
-                                  })}
-                                </p>
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <p className="text-sm text-gray-600">
-                            No items found.
-                          </p>
+                    </span>
+                  </div>
+                  <span className="font-semibold text-sm flex gap-2 text-gray-600">
+                    Status:
+                    <p
+                      className={`${
+                        order.status === 'pending'
+                          ? 'text-yellow-500'
+                          : order.status === 'on process'
+                          ? 'text-green-500'
+                          : 'text-blue-500'
+                      } capitalize`}
+                    >
+                      {order.status}
+                    </p>
+                  </span>
+                </div>
+
+                <div className="space-y-4">
+                  {order.order_items?.length > 0 ? (
+                    order.order_items.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between border-b pb-2"
+                      >
+                        <div className="flex items-center gap-4">
+                          <img
+                            src={item.products.image_url}
+                            alt={item.products.name}
+                            className="w-16 h-16 object-cover border rounded"
+                          />
+                          <div>
+                            <p className="font-medium">{item.products.name}</p>
+                            <p className="text-sm text-gray-600">
+                              Quantity: {item.quantity}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              Price: Rp{' '}
+                              {item.price.toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </p>
+                          </div>
+                        </div>
+                        {/* Tombol Delete Item, hanya tampil jika status pending atau on process */}
+                        {(order.status === 'pending' ||
+                          order.status === 'on process') && (
+                          <button
+                            className="text-red-500 text-sm"
+                            onClick={() => handleDeleteItem(order.id, item.id)}
+                          >
+                            Delete Item
+                          </button>
                         )}
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-600">No items found.</p>
+                  )}
+                </div>
+
+                {/* Tombol Delete Order, hanya tampil jika status pending atau on process */}
+                {(order.status === 'pending' ||
+                  order.status === 'on process') && (
+                  <div className="flex justify-end mt-4">
+                    <button
+                      className="bg-red-500 text-white px-6 py-2 rounded-lg"
+                      onClick={() => handleDeleteOrder(order.id)}
+                    >
+                      Delete Order
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
 
-          {/* Tombol Checkout */}
-          <div className="flex justify-center mt-6">
-            <a
-              href={createWhatsAppMessage()}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg hover:bg-green-600 transition"
-            >
-              Checkout via WhatsApp
-            </a>
-          </div>
+          {/* Tombol Checkout hanya tampil jika status pending */}
+          {orders.some((order) => order.status === 'pending') && (
+            <div className="flex justify-center mt-6">
+              <a
+                href={createWhatsAppMessage()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg hover:bg-green-600 transition"
+              >
+                Checkout via WhatsApp
+              </a>
+            </div>
+          )}
         </div>
       </section>
       <Footer />
