@@ -13,6 +13,10 @@ import { fetchCart } from '@/api/fetchCart';
 const Navbar = ({ cart, setCart, setIsOpenCart, isOpenCart }) => {
   const [isOpenMenu, setIsOpenMenu] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [totalPrice, setTotalPrice] = useState(0);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+  const [showMsg, setShowMsg] = useState(false);
 
   useEffect(() => {
     fetchCart(setCart);
@@ -100,7 +104,7 @@ const Navbar = ({ cart, setCart, setIsOpenCart, isOpenCart }) => {
       const cartId = cartData.id;
 
       // Menghapus item dari cart_items berdasarkan productId dan cartId
-      const { data: deletedItem, error: deleteError } = await supabase
+      const { error: deleteError } = await supabase
         .from('cart_items')
         .delete()
         .eq('cart_id', cartId)
@@ -111,11 +115,201 @@ const Navbar = ({ cart, setCart, setIsOpenCart, isOpenCart }) => {
         return;
       }
 
-      // Memanggil fungsi fetchCart untuk memperbarui data cart
+      const { data: cartItems } = await supabase
+        .from('cart_items')
+        .select('id', cartId)
+        .single();
+
+      if (cartItems === null) {
+        const { error: deleteCart } = await supabase
+          .from('cart')
+          .delete()
+          .eq('id', cartId);
+        if (deleteCart) {
+          fetchCart(setCart); // Memuat ulang data cart setelah item dihapus
+          return;
+        }
+        setCart(cartItems || []); // Memuat ulang data cart setelah item dihapus
+      }
+
       fetchCart(setCart); // Memuat ulang data cart setelah item dihapus
+      // Memanggil fungsi fetchCart untuk memperbarui data cart
     } catch (error) {
       console.error('Error removing item from cart:', error);
     }
+  };
+
+  const handleContinue = async (cartItems) => {
+    try {
+      // Mendapatkan user yang sedang login
+      const { data: globalUser, error: globalUserError } =
+        await supabase.auth.getUser();
+      if (globalUserError) {
+        console.error('Error fetching user:', globalUserError);
+        return;
+      }
+
+      if (!globalUser || !globalUser.user) {
+        console.error('No user is logged in.');
+        return;
+      }
+
+      const userEmail = globalUser.user.email;
+
+      // Mendapatkan user_id dari tabel users berdasarkan email
+      const { data: publicUser, error: publicUserError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', userEmail)
+        .single();
+
+      if (publicUserError || !publicUser) {
+        console.error(
+          'Error fetching user data:',
+          publicUserError || 'No user found'
+        );
+        return;
+      }
+
+      const userId = publicUser.id;
+
+      // Cek atau buat order untuk user
+      let { data: orderData, error: orderDataError } = await supabase
+        .from('orders')
+        .select('id')
+        .eq('user_id', userId)
+        .single();
+
+      if (!orderData || orderDataError) {
+        const { error: addOrderError } = await supabase
+          .from('orders')
+          .insert([
+            {
+              user_id: userId,
+              total_price: totalPrice,
+            },
+          ])
+          .single();
+
+        if (addOrderError) {
+          console.error('Error creating order:', addOrderError);
+          return;
+        }
+
+        let { data: newOrder, error: newOrderError } = await supabase
+          .from('orders')
+          .select('id')
+          .eq('user_id', userId)
+          .single();
+
+        if (newOrderError) {
+          console.error('Error retrieving new order:', newOrderError);
+          return;
+        }
+        orderData = newOrder;
+      }
+
+      // Proses setiap item di cart
+      for (const item of cartItems) {
+        const { products, quantity } = item;
+
+        // Cek apakah produk sudah ada di order_items
+        let { data: orderItem, error: orderItemError } = await supabase
+          .from('order_items')
+          .select('id, quantity')
+          .eq('order_id', orderData.id)
+          .eq('product_id', products.id)
+          .single();
+
+        if (orderItemError && orderItemError.code !== 'PGRST116') {
+          console.error('Error fetching order item:', orderItemError);
+          return;
+        }
+
+        if (orderItem) {
+          // Jika produk sudah ada, perbarui kuantitas
+          const updatedQuantity = orderItem.quantity + quantity;
+
+          const { error: updateError } = await supabase
+            .from('order_items')
+            .update({ quantity: updatedQuantity })
+            .eq('id', orderItem.id);
+
+          if (updateError) {
+            console.error('Error updating order item:', updateError);
+            return;
+          }
+        } else {
+          // Jika belum ada, tambahkan produk ke order_items
+          const { error: insertError } = await supabase
+            .from('order_items')
+            .insert([
+              {
+                order_id: orderData.id,
+                product_id: products.id,
+                quantity: quantity, // Menggunakan quantity dari cartItems
+                price: products.price,
+              },
+            ]);
+
+          if (insertError) {
+            console.error('Error inserting order item:', insertError);
+            return;
+          }
+        }
+      }
+      let { data: userCart, error: userCartError } = await supabase
+        .from('cart')
+        .select('id')
+        .eq('user_id', userId)
+        .single();
+
+      if (!userCart || userCartError) {
+        console.error('cart anda tidak ada:', userCartError);
+        return;
+      }
+
+      const userCartId = userCart.id;
+
+      const { error: deleteCartError } = await supabase
+        .from('cart_items')
+        .delete()
+        .eq('cart_id', userCartId);
+
+      if (deleteCartError) {
+        console.error('Error deleting cart:', deleteCartError);
+        return;
+      }
+
+      const { error: cartItemError } = await supabase
+        .from('cart')
+        .delete()
+        .eq('user_id', userId);
+
+      if (cartItemError) {
+        console.error('Error deleting cart items:', cartItemError);
+        return;
+      }
+
+      setSuccessMsg(`Pesanan anda telah ditambahkan`);
+      setShowMsg(true);
+      setTimeout(() => {
+        setShowMsg(false);
+      }, 3000);
+      router.push('/order');
+    } catch (error) {
+      console.error('Error processing cart:', error);
+      setErrorMsg('Something went wrong. Please try again.');
+      setShowMsg(true);
+      setTimeout(() => {
+        setShowMsg(false);
+      }, 3000);
+      setTimeout(() => window.location.reload(), 4000);
+    }
+  };
+
+  const handleEdit = () => {
+    return router.push('/cart');
   };
 
   return (
@@ -181,6 +375,13 @@ const Navbar = ({ cart, setCart, setIsOpenCart, isOpenCart }) => {
                   cart={cart}
                   setIsOpenCart={setIsOpenCart}
                   removeFromCart={removeFromCart}
+                  totalPrice={totalPrice}
+                  setTotalPrice={setTotalPrice}
+                  showMsg={showMsg}
+                  errorMsg={errorMsg}
+                  successMsg={successMsg}
+                  handleContinue={handleContinue}
+                  handleEdit={handleEdit}
                 />
               </div>
             </div>
@@ -250,6 +451,13 @@ const Navbar = ({ cart, setCart, setIsOpenCart, isOpenCart }) => {
               cart={cart}
               setIsOpenCart={setIsOpenCart}
               removeFromCart={removeFromCart}
+              totalPrice={totalPrice}
+              setTotalPrice={setTotalPrice}
+              showMsg={showMsg}
+              errorMsg={errorMsg}
+              successMsg={successMsg}
+              handleContinue={handleContinue}
+              handleEdit={handleEdit}
             />
           </div>
         </div>

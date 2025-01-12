@@ -192,6 +192,41 @@ const ProductPage = () => {
     loadProducts(); // Log when cates state changes
   }, [cates]);
 
+  const itemsPerPage = 8; // Tentukan jumlah produk per halaman
+  const [currentPage, setCurrentPage] = useState(1); // Halaman yang aktif
+
+  // Filter produk berdasarkan kategori yang dipilih
+  const filteredProducts = products.filter(
+    (product) => cates === 'all' || product.category_id === cates
+  );
+
+  // Menghitung jumlah total halaman
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+
+  // Mengambil produk yang akan ditampilkan pada halaman saat ini
+  const getCurrentPageProducts = () => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredProducts.slice(startIndex, endIndex);
+  };
+
+  // Fungsi untuk berpindah ke halaman sebelumnya
+  const goToPreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  // Fungsi untuk berpindah ke halaman berikutnya
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  // Menampilkan produk yang sesuai dengan halaman aktif
+  const currentPageProducts = getCurrentPageProducts();
+
   return (
     <div>
       <Navbar
@@ -242,16 +277,17 @@ const ProductPage = () => {
         <div>
           {iconChevron && categories.length > 0 ? (
             <div className="absolute ease-in-out duration-500 flex bg-white rounded-sm mx-2 p-4 sm:w-[15.5rem] w-[9rem] shadow-md border flex-col">
-              {categories.map((category, i) => (
+              {['all', ...categories].map((category, i) => (
                 <div key={i} className="py-2">
                   <div
                     onClick={() => {
-                      setCates(category.id);
+                      setCates(category === 'all' ? 'all' : category.id); // Menangani kategori 'all'
                       setIconChevron(!iconChevron);
                     }}
                     className="sm:text-sm text-xs ease-in-out text-slate-600 uppercase font-semibold p-2 duration-300 cursor-pointer w-full hover:bg-slate-200 rounded-md"
                   >
-                    {category.name}
+                    {category === 'all' ? 'All Categories' : category.name}{' '}
+                    {/* Menampilkan nama kategori */}
                   </div>
                 </div>
               ))}
@@ -267,65 +303,90 @@ const ProductPage = () => {
               {alertMessage}
             </div>
           )}
-          <span className="sm:text-2xl text-lg font-bold">Title</span>
+          <span className="sm:text-2xl text-lg font-bold uppercase">
+            {cates === 'all'
+              ? 'all product'
+              : cates === 1
+              ? 'coffee'
+              : 'non coffee'}
+          </span>
           <span className="sm:text-sm text-xs pb-1 font-bold text-slate-400">
-            1 Item
+            {
+              products.filter(
+                (product) => cates === 'all' || product.category_id === cates
+              ).length
+            }{' '}
+            Items
           </span>
         </div>
         <div className="grid sm:grid-cols-4 gap-8">
-          {products
-            .filter(
-              (product) => cates === 'all' || product.category_id === cates
-            ) // Show all products if 'cates' is 'all'
-            .map((product) => (
-              <div
-                key={product.id}
-                className="border rounded-lg shadow-md bg-white hover:shadow-lg transition-shadow"
-              >
-                <img
-                  src={product.image_url}
-                  className="w-full rounded-t-lg h-[20rem] object-cover"
-                  alt={product.name}
-                />
-                <div className="p-4 flex flex-col gap-3">
-                  <span className="text-xl font-bold text-gray-800">
-                    {product.name}
+          {currentPageProducts.map((product) => (
+            <div
+              key={product.id}
+              className="border rounded-lg shadow-md bg-white hover:shadow-lg transition-shadow"
+            >
+              <img
+                src={product.image_url}
+                className="w-full rounded-t-lg h-[20rem] object-cover"
+                alt={product.name}
+              />
+              <div className="p-4 flex flex-col gap-3">
+                <span className="text-xl font-bold text-gray-800">
+                  {product.name}
+                </span>
+                <span className="text-sm font-medium text-gray-500">
+                  Stock: {product.stock}
+                </span>
+                <div className="flex items-center justify-between py-2">
+                  <span className="text-base font-semibold text-green-600">
+                    Rp {product.price.toLocaleString('id-ID')}
                   </span>
-                  <span className="text-sm font-medium text-gray-500">
-                    Stock: {product.stock}
-                  </span>
-                  <div className="flex items-center justify-between py-2">
-                    <span className="text-base font-semibold text-green-600">
-                      Rp {product.price.toLocaleString('id-ID')}
-                    </span>
-                    <input
-                      type="number"
-                      placeholder="0"
-                      className="focus:outline-none bg-gray-100 rounded-sm sm:pl-4 text-sm w-16 border border-gray-300 text-center"
-                      value={valueQty[product.id] || 1}
-                      onChange={(e) =>
-                        handleQtyChange(product.id, parseInt(e.target.value))
-                      }
-                      min={1}
-                      max={product.stock}
-                    />
-                  </div>
-                  <Button
-                    onClick={() =>
-                      addToCart(product, valueQty[product.id] || 1)
+                  <input
+                    type="number"
+                    placeholder="0"
+                    className="focus:outline-none bg-gray-100 rounded-sm sm:pl-4 text-sm w-16 border border-gray-300 text-center"
+                    value={valueQty[product.id] || 1}
+                    onChange={(e) =>
+                      handleQtyChange(product.id, parseInt(e.target.value))
                     }
-                    color="default"
-                    className="rounded-md bg-green-500 mb-4 hover:bg-green-600 text-white capitalize py-2"
-                    size="small"
-                    label={
-                      <div className="flex gap-2 items-center justify-center">
-                        <FontAwesomeIcon icon={faShoppingCart} /> Add to Cart
-                      </div>
-                    }
+                    min={1}
+                    max={product.stock}
                   />
                 </div>
+                <Button
+                  onClick={() => addToCart(product, valueQty[product.id] || 1)}
+                  color="default"
+                  className="rounded-md bg-green-500 mb-4 hover:bg-green-600 text-white capitalize py-2"
+                  size="small"
+                  label={
+                    <div className="flex gap-2 items-center justify-center">
+                      <FontAwesomeIcon icon={faShoppingCart} /> Add to Cart
+                    </div>
+                  }
+                />
               </div>
-            ))}
+            </div>
+          ))}
+        </div>
+        {/* Navigasi Paginasi */}
+        <div className="flex justify-between mt-8">
+          <Button
+            onClick={goToPreviousPage}
+            disabled={currentPage === 1}
+            className="px-4 py-2 text-white disabled:hover:bg-green-500 rounded-md"
+            label="Previous"
+            color="default"
+          />
+          <span>
+            Page {currentPage} of {totalPages}
+          </span>
+          <Button
+            onClick={goToNextPage}
+            disabled={currentPage === totalPages}
+            className="px-4 py-2 text-white disabled:hover:bg-green-500 rounded-md"
+            label="Next"
+            color="default"
+          />
         </div>
       </section>
       {/* End Section */}
