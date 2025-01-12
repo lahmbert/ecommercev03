@@ -113,7 +113,7 @@ const OrderPage = () => {
     });
 
     const encodedMessage = encodeURIComponent(message);
-    const phoneNumber = '085334679379'; // Ganti dengan nomor WhatsApp yang menerima pesan
+    const phoneNumber = '+6285334679379'; // Ganti dengan nomor WhatsApp yang menerima pesan
     return `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
   };
 
