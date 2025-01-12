@@ -86,7 +86,10 @@ const OrderPage = () => {
 
   // Fungsi untuk membuat pesan checkout ke WhatsApp
   const createWhatsAppMessage = () => {
+    const phoneNumber = '6285334679379'; // Ganti dengan nomor WhatsApp yang sesuai
     let message = `*Your Order Details*%0A%0A`;
+
+    message += `*===========================*%0A`;
 
     orders.forEach((order) => {
       message += `*Order ID:* ${order.id}%0A`;
@@ -101,7 +104,7 @@ const OrderPage = () => {
       message += `*Order Items:*%0A`;
 
       order.order_items?.forEach((item) => {
-        message += `- ${item.products.name} (Qty: ${
+        message += `  - *${item.products.name}* (Qty: ${
           item.quantity
         }) - Rp ${item.price.toLocaleString(undefined, {
           minimumFractionDigits: 2,
@@ -109,12 +112,12 @@ const OrderPage = () => {
         })}%0A`;
       });
 
+      message += `*===========================*%0A`; // Add a separator after each order
       message += '%0A'; // Add spacing between orders
     });
 
-    const encodedMessage = encodeURIComponent(message);
-    const phoneNumber = '+6285334679379'; // Ganti dengan nomor WhatsApp yang menerima pesan
-    return `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
+    // Return the full URL with phone number and message
+    return `https://wa.me/${phoneNumber}?text=${message}`;
   };
 
   return (
